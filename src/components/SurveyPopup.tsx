@@ -28,11 +28,18 @@ export function SurveyPopup({
     setSubmitting(true);
     try {
       await api.post(`/bookings/${booking.id}/feedback`, { rating, comment: comment || null });
+      sessionStorage.setItem(`survey_dismissed_${booking.id}`, "1");
       onDone();
     } catch {
       // if it fails, just let them dismiss — not worth blocking the dashboard over
       setSubmitting(false);
     }
+  }
+
+  function handleDismiss() {
+    sessionStorage.setItem(`survey_dismissed_${booking.id}`, "1");
+    setDismissed(true);
+    onDone();
   }
 
   if (dismissed) return null;
@@ -41,7 +48,7 @@ export function SurveyPopup({
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-40 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm relative">
         <button
-          onClick={() => { setDismissed(true); onDone(); }}
+          onClick={handleDismiss}
           className="absolute top-3 right-3 text-brand-muted hover:text-brand-dark"
         >
           <X size={18} />

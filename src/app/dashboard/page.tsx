@@ -89,7 +89,16 @@ export default function DashboardPage() {
     api.get<typeof bankDetails>("/wallet/bank-details").then(setBankDetails).catch(() => {});
     api
       .get<typeof pendingFeedbackBooking>("/feedback/pending")
-      .then(setPendingFeedbackBooking)
+      .then((booking) => {
+        // Don't re-show a survey the customer already dismissed this
+        // session just because the page reloaded — reloading shouldn't
+        // feel like being nagged. If they never respond, the daily email
+        // (surveys:send) is the follow-up channel, not repeated popups.
+        if (booking && sessionStorage.getItem(`survey_dismissed_${booking.id}`)) {
+          return;
+        }
+        setPendingFeedbackBooking(booking);
+      })
       .catch(() => {});
   }, [customer]);
 
