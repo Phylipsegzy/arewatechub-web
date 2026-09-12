@@ -73,3 +73,32 @@ export interface Booking {
   workspace_session?: WorkspaceSessionOption | null;
   internet_access?: InternetAccess | null;
 }
+
+export interface TeenProgramPayment {
+  id: number;
+  payment_type: "registration" | "vip";
+  amount: string;
+  reference: string;
+  created_at: string;
+}
+
+export interface TeenProgramRegistration {
+  id: number;
+  child_firstname: string;
+  child_lastname: string;
+  child_age: number;
+  child_gender: string | null;
+  school: string | null;
+  parent_name: string;
+  parent_phone: string;
+  parent_address: string;
+  nearest_landmark: string;
+  relationship: string | null;
+  registration_amount: string;
+  registration_payment_status: "unpaid" | "paid";
+  vip_requested: boolean;
+  vip_amount: string;
+  vip_payment_status: "not_requested" | "unpaid" | "paid";
+  created_at: string;
+  payments?: TeenProgramPayment[];
+}

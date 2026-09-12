@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { Wifi, ShieldCheck, Globe2, Zap, Eye, EyeOff, GraduationCap, ArrowRight } from "lucide-react";
@@ -29,7 +30,17 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") || undefined;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +52,7 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(email, password, next);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong");
     } finally {
@@ -169,7 +180,7 @@ export default function LoginPage() {
             </form>
 
             <p className="text-sm text-brand-muted mt-5 text-center">
-              No account? <a href="/register" className="text-brand-primary font-medium">Create one</a>
+              No account? <a href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"} className="text-brand-primary font-medium">Create one</a>
             </p>
           </div>
 

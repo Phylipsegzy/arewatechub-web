@@ -9,6 +9,7 @@ const links = [
   { href: "/booking", label: "Workspace" },
   { href: "/academy/courses", label: "Courses" },
   { href: "/academy/cohort", label: "Cohort Programme" },
+  { href: "/future-builders-camp", label: "Future Builders Camp" },
 ];
 
 export function SiteHeader() {

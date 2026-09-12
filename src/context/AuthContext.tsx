@@ -9,14 +9,14 @@ interface AuthContextValue {
   customer: Customer | null;
   loading: boolean;
   sessionError: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, redirectTo?: string) => Promise<void>;
   register: (data: {
     firstname: string;
     lastname: string;
     email: string;
     phone?: string;
     password: string;
-  }) => Promise<void>;
+  }, redirectTo?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshCustomer: () => Promise<void>;
 }
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, redirectTo?: string) => {
     const data = await api.post<{ customer: Customer; token: string }>("/auth/login", {
       email,
       password,
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(data.token);
     setSessionError(false);
     setCustomer(data.customer);
-    router.push("/dashboard");
+    router.push(redirectTo || "/dashboard");
   };
 
   const register = async (payload: {
@@ -73,14 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string;
     phone?: string;
     password: string;
-  }) => {
+  }, redirectTo?: string) => {
     const data = await api.post<{ customer: Customer; token: string }>(
       "/auth/register",
       payload
     );
     setToken(data.token);
     setCustomer(data.customer);
-    router.push("/dashboard");
+    router.push(redirectTo || "/dashboard");
   };
 
   const logout = async () => {

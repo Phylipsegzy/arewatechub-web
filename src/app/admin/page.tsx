@@ -6,7 +6,7 @@ import { useAdminAuth } from "@/context/AdminAuthContext";
 import { adminApi } from "@/lib/adminApi";
 import {
   LayoutDashboard, CalendarDays, Users, Wallet, PlusCircle, LogOut, Search,
-  Sparkles, Clock, Armchair, Check, Bell, BellOff,
+  Sparkles, Clock, Armchair, Check, Bell, BellOff, GraduationCap,
 } from "lucide-react";
 import { subscribeToPush, unsubscribeFromPush, getExistingPushSubscription } from "@/lib/push";
 
@@ -42,6 +42,20 @@ interface PendingFunding {
   customer: { firstname: string; lastname: string; email: string };
 }
 
+interface TeenRegistration {
+  id: number;
+  child_firstname: string;
+  child_lastname: string;
+  child_age: number;
+  school: string | null;
+  parent_name: string;
+  parent_phone: string;
+  registration_payment_status: string;
+  vip_payment_status: string;
+  created_at: string;
+  customer: { firstname: string; lastname: string; email: string; phone: string | null };
+}
+
 interface Overview {
   total_customers: number;
   total_bookings: number;
@@ -68,7 +82,7 @@ interface WorkspaceDuration {
   price: string;
 }
 
-type Tab = "overview" | "bookings" | "book" | "customers" | "fundings";
+type Tab = "overview" | "bookings" | "book" | "customers" | "fundings" | "teenprogram";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -127,6 +141,7 @@ const navItems: { tab: Tab; label: string; icon: React.ReactNode }[] = [
   { tab: "book", label: "Book for Customer", icon: <PlusCircle size={18} /> },
   { tab: "customers", label: "Customers", icon: <Users size={18} /> },
   { tab: "fundings", label: "Wallet Fundings", icon: <Wallet size={18} /> },
+  { tab: "teenprogram", label: "Future Builders Camp", icon: <GraduationCap size={18} /> },
 ];
 
 export default function AdminDashboardPage() {
@@ -172,6 +187,7 @@ export default function AdminDashboardPage() {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [fundings, setFundings] = useState<PendingFunding[]>([]);
+  const [teenRegistrations, setTeenRegistrations] = useState<TeenRegistration[]>([]);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [rescheduleId, setRescheduleId] = useState<number | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
@@ -222,6 +238,8 @@ export default function AdminDashboardPage() {
           .catch((e) => setTabError(e.message ?? "Could not load customers"));
       } else if (tab === "fundings") {
         adminApi.get<PendingFunding[]>("/admin/wallet-fundings/pending").then(setFundings).catch((e) => setTabError(e.message ?? "Could not load wallet fundings"));
+      } else if (tab === "teenprogram") {
+        adminApi.get<{ data: TeenRegistration[] }>("/admin/teen-program").then((r) => setTeenRegistrations(r.data)).catch((e) => setTabError(e.message ?? "Could not load registrations"));
       } else if (tab === "book") {
         adminApi.get<WorkspacePlan[]>("/admin/workspace/plans").then(setPlans).catch((e) => setTabError(e.message ?? "Could not load plans"));
       }
@@ -813,6 +831,40 @@ export default function AdminDashboardPage() {
                 Nothing pending — dedicated account transfers auto-credit via webhook.
               </div>
             )}
+          </div>
+        )}
+
+        {tab === "teenprogram" && (
+          <div className="bg-white rounded-xl border p-5 overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead>
+                <tr className="text-left text-brand-muted border-b">
+                  <th className="py-2">Child</th><th>Parent</th><th>Registration Fee</th><th>VIP</th><th>Registered</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teenRegistrations.map((r) => (
+                  <tr key={r.id} className="border-b last:border-0">
+                    <td className="py-2">{r.child_firstname} {r.child_lastname}<br /><span className="text-xs text-brand-muted">Age {r.child_age} • {r.school || "—"}</span></td>
+                    <td>{r.customer.firstname} {r.customer.lastname}<br /><span className="text-xs text-brand-muted">{r.customer.email}</span></td>
+                    <td>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${r.registration_payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+                        {r.registration_payment_status}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${r.vip_payment_status === "paid" ? "bg-brand-secondary text-brand-primary" : "bg-gray-100 text-brand-muted"}`}>
+                        {r.vip_payment_status.replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="text-xs text-brand-muted">{new Date(r.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+                {teenRegistrations.length === 0 && (
+                  <tr><td colSpan={5} className="py-6 text-center text-brand-muted">No registrations yet.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </main>

@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
   const { register } = useAuth();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") || undefined;
   const [form, setForm] = useState({
     firstname: "",
     lastname: "",
@@ -27,7 +38,7 @@ export default function RegisterPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await register(form);
+      await register(form, next);
     } catch (err) {
       if (err instanceof ApiError && err.errors) {
         setError(Object.values(err.errors).flat().join(" "));
@@ -75,7 +86,7 @@ export default function RegisterPage() {
         </button>
 
         <p className="text-sm text-brand-muted mt-4 text-center">
-          Already have an account? <a href="/login" className="text-brand-primary font-medium">Sign in</a>
+          Already have an account? <a href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="text-brand-primary font-medium">Sign in</a>
         </p>
       </form>
       </div>

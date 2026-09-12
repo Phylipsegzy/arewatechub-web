@@ -42,10 +42,10 @@ export default function DashboardPage() {
   const [fundAmount, setFundAmount] = useState("");
   const [funding, setFunding] = useState(false);
   const [fundError, setFundError] = useState<string | null>(null);
-  const [dedicatedAccount, setDedicatedAccount] = useState<{
-    bank_name: string; account_name: string; account_number: string;
-  } | null>(null);
-  const [generatingAccount, setGeneratingAccount] = useState(false);
+  const [dedicatedAccounts, setDedicatedAccounts] = useState<
+    { provider: string; bank_name: string; account_name: string; account_number: string }[]
+  >([]);
+  const [generatingProvider, setGeneratingProvider] = useState<string | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [bankDetails, setBankDetails] = useState<{ bank_name: string; account_name: string; account_number: string } | null>(null);
   const [pendingFeedbackBooking, setPendingFeedbackBooking] = useState<{ id: number; room?: { name: string } | null; start_date: string } | null>(null);
@@ -83,8 +83,8 @@ export default function DashboardPage() {
       .then((r) => setBookings(r.data))
       .catch(() => {});
     api
-      .get<typeof dedicatedAccount>("/wallet/dedicated-account")
-      .then(setDedicatedAccount)
+      .get<typeof dedicatedAccounts>("/wallet/dedicated-account")
+      .then(setDedicatedAccounts)
       .catch(() => {});
     api.get<typeof bankDetails>("/wallet/bank-details").then(setBankDetails).catch(() => {});
     api
@@ -102,16 +102,16 @@ export default function DashboardPage() {
       .catch(() => {});
   }, [customer]);
 
-  async function handleGenerateAccount() {
-    setGeneratingAccount(true);
+  async function handleGenerateAccount(provider: "wema-bank" | "titan-paystack") {
+    setGeneratingProvider(provider);
     setAccountError(null);
     try {
-      const account = await api.post<typeof dedicatedAccount>("/wallet/dedicated-account");
-      setDedicatedAccount(account);
+      const account = await api.post<(typeof dedicatedAccounts)[number]>("/wallet/dedicated-account", { provider });
+      setDedicatedAccounts((prev) => [...prev.filter((a) => a.provider !== provider), account]);
     } catch (err) {
       setAccountError(err instanceof ApiError ? err.message : "Could not generate account");
     } finally {
-      setGeneratingAccount(false);
+      setGeneratingProvider(null);
     }
   }
 
@@ -200,30 +200,37 @@ export default function DashboardPage() {
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg border p-6">
           <h2 className="font-semibold mb-3">Fund via Dedicated Account (Instant)</h2>
-          {dedicatedAccount ? (
-            <div className="text-sm space-y-1">
-              <p className="text-brand-muted">Transfer any amount to this account — your wallet is credited automatically.</p>
-              <div className="mt-2 bg-brand-secondary rounded-md p-3">
-                <p className="font-bold text-lg text-brand-dark tracking-wide">{dedicatedAccount.account_number}</p>
-                <p>{dedicatedAccount.bank_name}</p>
-                <p className="text-brand-muted">{dedicatedAccount.account_name}</p>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <p className="text-sm text-brand-muted mb-3">
-                Generate a permanent account number for this wallet — no need to fund via card every time.
-              </p>
-              <button
-                onClick={handleGenerateAccount}
-                disabled={generatingAccount}
-                className="bg-brand-dark text-white rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-60"
-              >
-                {generatingAccount ? "Generating…" : "Generate Account Number"}
-              </button>
-              {accountError && <p className="text-sm text-red-600 mt-2">{accountError}</p>}
-            </div>
-          )}
+          <p className="text-sm text-brand-muted mb-3">
+            Transfer any amount to either account below — your wallet is credited automatically. You can generate one from each provider.
+          </p>
+
+          <div className="space-y-3">
+            {(["wema-bank", "titan-paystack"] as const).map((provider) => {
+              const account = dedicatedAccounts.find((a) => a.provider === provider);
+              const label = provider === "wema-bank" ? "Wema Bank" : "Paystack-Titan";
+
+              return (
+                <div key={provider}>
+                  {account ? (
+                    <div className="bg-brand-secondary rounded-md p-3 text-sm">
+                      <p className="font-bold text-lg text-brand-dark tracking-wide">{account.account_number}</p>
+                      <p>{account.bank_name}</p>
+                      <p className="text-brand-muted">{account.account_name}</p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleGenerateAccount(provider)}
+                      disabled={generatingProvider === provider}
+                      className="w-full text-left bg-gray-50 border border-dashed rounded-md p-3 text-sm hover:border-brand-primary disabled:opacity-60"
+                    >
+                      {generatingProvider === provider ? "Generating…" : `+ Generate ${label} account number`}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {accountError && <p className="text-sm text-red-600 mt-2">{accountError}</p>}
         </div>
 
         <div className="bg-white rounded-lg border p-6">
