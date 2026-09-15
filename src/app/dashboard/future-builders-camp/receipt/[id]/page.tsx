@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import Image from "next/image";
+import { PdfActions } from "@/components/PdfActions";
 import type { TeenProgramRegistration } from "@/types";
 
 interface ReceiptData extends TeenProgramRegistration {
@@ -42,9 +43,10 @@ export default function TeenReceiptPage() {
             <Image src="/brand/logo-icon.png" alt="ArewaTecHub" width={32} height={32} />
             <span className="font-bold text-brand-dark">ArewaTecHub</span>
           </div>
-          <button onClick={() => window.print()} className="text-sm text-brand-primary font-medium print:hidden">
-            Print / Save as PDF
-          </button>
+          <PdfActions
+            downloadPath={`/teen-program/${receipt.id}/receipt/pdf`}
+            filename={`ArewaTecHub_Receipt_RCP-FBC-${String(receipt.id).padStart(5, "0")}.pdf`}
+          />
         </div>
 
         <h1 className="text-lg font-bold text-brand-dark mb-1">Future Builders Camp — Receipt</h1>

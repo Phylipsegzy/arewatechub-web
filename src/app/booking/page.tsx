@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { SiteHeader } from "@/components/SiteHeader";
+import { DashboardShell } from "@/components/DashboardShell";
 import type { Availability, PlanDuration, Room, WorkspacePlan, WorkspaceSessionOption } from "@/types";
 import { Check, Users, Sparkles, CalendarDays, Armchair, Wallet, Clock } from "lucide-react";
 
@@ -181,9 +182,7 @@ export default function BookingPage() {
     : null;
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
-      <SiteHeader />
-
+    <DashboardShell>
       <div className="max-w-5xl mx-auto w-full p-6 grid lg:grid-cols-[1fr_300px] gap-6">
         <div>
           <h1 className="text-2xl font-bold text-brand-dark mb-1">Book a Workspace</h1>
@@ -400,6 +399,6 @@ export default function BookingPage() {
           </div>
         </aside>
       </div>
-    </main>
+    </DashboardShell>
   );
 }

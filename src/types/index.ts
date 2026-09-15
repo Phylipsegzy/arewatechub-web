@@ -74,6 +74,40 @@ export interface Booking {
   internet_access?: InternetAccess | null;
 }
 
+export interface CohortBatch {
+  id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  slots_remaining: number;
+  full: boolean;
+}
+
+export interface CohortPricing {
+  bootcamp_fee: number;
+  non_bootcamp_fee: number;
+  tuition_full: number;
+  tuition_current: number;
+  discount_active: boolean;
+  discount_ends_at: string;
+}
+
+export interface CohortEnrollment {
+  id: number;
+  track_selected: string;
+  programme_selected: string;
+  bootcamp_option: "bootcamp" | "non_bootcamp";
+  status_type: string;
+  tuition_tier: string | null;
+  bootcamp_fee: string;
+  tuition_fee: string;
+  amount_due: string;
+  amount_paid: string;
+  payment_status: "unpaid" | "partial" | "paid";
+  application_status: "pending" | "accepted" | "rejected";
+  intake: { id: number; name: string; start_date?: string; end_date?: string };
+}
+
 export interface TeenProgramPayment {
   id: number;
   payment_type: "registration" | "vip";

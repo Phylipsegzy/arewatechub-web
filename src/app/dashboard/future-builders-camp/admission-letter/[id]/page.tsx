@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import Image from "next/image";
+import { PdfActions } from "@/components/PdfActions";
 import type { TeenProgramRegistration } from "@/types";
 
 interface LetterData extends TeenProgramRegistration {
@@ -40,9 +41,10 @@ export default function AdmissionLetterPage() {
             <Image src="/brand/logo-icon.png" alt="ArewaTecHub" width={40} height={40} />
             <span className="font-bold text-lg text-brand-dark">ArewaTecHub</span>
           </div>
-          <button onClick={() => window.print()} className="text-sm text-brand-primary font-medium print:hidden">
-            Print / Save as PDF
-          </button>
+          <PdfActions
+            downloadPath={`/teen-program/${reg.id}/admission-letter/pdf`}
+            filename={`ArewaTecHub_Admission_Letter_${reg.child_firstname}_${reg.child_lastname}.pdf`}
+          />
         </div>
 
         <h1 className="text-2xl font-bold text-brand-dark text-center mb-1">Letter of Admission</h1>

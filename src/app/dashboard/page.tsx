@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { openPaystackPopup } from "@/lib/paystack";
 import { SiteHeader } from "@/components/SiteHeader";
+import { DashboardShell } from "@/components/DashboardShell";
 import { SurveyPopup } from "@/components/SurveyPopup";
 import type { Booking, WalletTransaction } from "@/types";
 
@@ -171,8 +172,7 @@ export default function DashboardPage() {
   const pastBookings = bookings.filter((b) => !upcomingBookings.includes(b));
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
-      <SiteHeader />
+    <DashboardShell>
       <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-brand-primary">
@@ -373,6 +373,6 @@ export default function DashboardPage() {
           onDone={() => setPendingFeedbackBooking(null)}
         />
       )}
-    </main>
+    </DashboardShell>
   );
 }

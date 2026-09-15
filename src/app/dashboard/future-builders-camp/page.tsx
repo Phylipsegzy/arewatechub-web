@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { SiteHeader } from "@/components/SiteHeader";
+import { DashboardShell } from "@/components/DashboardShell";
 import type { TeenProgramRegistration } from "@/types";
 import { UserPlus, Wallet, Star, FileText, Award } from "lucide-react";
 
@@ -160,8 +161,7 @@ export default function FutureBuildersCampDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
-      <SiteHeader />
+    <DashboardShell>
       <div className="max-w-2xl mx-auto w-full p-6">
         <h1 className="text-2xl font-bold text-brand-dark mb-1">Future Builders Camp</h1>
         <p className="text-brand-muted mb-6">Manage your children's registrations and payments.</p>
@@ -221,6 +221,6 @@ export default function FutureBuildersCampDashboard() {
           </form>
         )}
       </div>
-    </main>
+    </DashboardShell>
   );
 }

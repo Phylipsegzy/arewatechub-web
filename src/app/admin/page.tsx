@@ -6,7 +6,7 @@ import { useAdminAuth } from "@/context/AdminAuthContext";
 import { adminApi } from "@/lib/adminApi";
 import {
   LayoutDashboard, CalendarDays, Users, Wallet, PlusCircle, LogOut, Search,
-  Sparkles, Clock, Armchair, Check, Bell, BellOff, GraduationCap,
+  Sparkles, Clock, Armchair, Check, Bell, BellOff, GraduationCap, BookOpen,
 } from "lucide-react";
 import { subscribeToPush, unsubscribeFromPush, getExistingPushSubscription } from "@/lib/push";
 
@@ -56,6 +56,21 @@ interface TeenRegistration {
   customer: { firstname: string; lastname: string; email: string; phone: string | null };
 }
 
+interface CohortAdminRow {
+  id: number;
+  track_selected: string;
+  programme_selected: string;
+  bootcamp_option: string;
+  status_type: string;
+  amount_due: string;
+  amount_paid: string;
+  payment_status: string;
+  application_status: string;
+  created_at: string;
+  intake: { name: string };
+  customer: { firstname: string; lastname: string; email: string; phone: string | null };
+}
+
 interface Overview {
   total_customers: number;
   total_bookings: number;
@@ -82,7 +97,7 @@ interface WorkspaceDuration {
   price: string;
 }
 
-type Tab = "overview" | "bookings" | "book" | "customers" | "fundings" | "teenprogram";
+type Tab = "overview" | "bookings" | "book" | "customers" | "fundings" | "teenprogram" | "cohort";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -142,6 +157,7 @@ const navItems: { tab: Tab; label: string; icon: React.ReactNode }[] = [
   { tab: "customers", label: "Customers", icon: <Users size={18} /> },
   { tab: "fundings", label: "Wallet Fundings", icon: <Wallet size={18} /> },
   { tab: "teenprogram", label: "Future Builders Camp", icon: <GraduationCap size={18} /> },
+  { tab: "cohort", label: "Cohort Programme", icon: <BookOpen size={18} /> },
 ];
 
 export default function AdminDashboardPage() {
@@ -188,6 +204,7 @@ export default function AdminDashboardPage() {
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [fundings, setFundings] = useState<PendingFunding[]>([]);
   const [teenRegistrations, setTeenRegistrations] = useState<TeenRegistration[]>([]);
+  const [cohortEnrollments, setCohortEnrollments] = useState<CohortAdminRow[]>([]);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [rescheduleId, setRescheduleId] = useState<number | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
@@ -240,6 +257,8 @@ export default function AdminDashboardPage() {
         adminApi.get<PendingFunding[]>("/admin/wallet-fundings/pending").then(setFundings).catch((e) => setTabError(e.message ?? "Could not load wallet fundings"));
       } else if (tab === "teenprogram") {
         adminApi.get<{ data: TeenRegistration[] }>("/admin/teen-program").then((r) => setTeenRegistrations(r.data)).catch((e) => setTabError(e.message ?? "Could not load registrations"));
+      } else if (tab === "cohort") {
+        adminApi.get<{ data: CohortAdminRow[] }>("/admin/cohort").then((r) => setCohortEnrollments(r.data)).catch((e) => setTabError(e.message ?? "Could not load enrollments"));
       } else if (tab === "book") {
         adminApi.get<WorkspacePlan[]>("/admin/workspace/plans").then(setPlans).catch((e) => setTabError(e.message ?? "Could not load plans"));
       }
@@ -862,6 +881,37 @@ export default function AdminDashboardPage() {
                 ))}
                 {teenRegistrations.length === 0 && (
                   <tr><td colSpan={5} className="py-6 text-center text-brand-muted">No registrations yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {tab === "cohort" && (
+          <div className="bg-white rounded-xl border p-5 overflow-x-auto">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead>
+                <tr className="text-left text-brand-muted border-b">
+                  <th className="py-2">Student</th><th>Batch / Track</th><th>Package</th><th>Amount Due</th><th>Status</th><th>Enrolled</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cohortEnrollments.map((e) => (
+                  <tr key={e.id} className="border-b last:border-0">
+                    <td className="py-2">{e.customer.firstname} {e.customer.lastname}<br /><span className="text-xs text-brand-muted">{e.customer.email}</span></td>
+                    <td>{e.intake.name}<br /><span className="text-xs text-brand-muted">{e.track_selected}</span></td>
+                    <td className="text-xs">{e.bootcamp_option === "bootcamp" ? "Bootcamp" : "Non-Bootcamp"}<br /><span className="text-brand-muted">{e.status_type}</span></td>
+                    <td>₦{Number(e.amount_due).toLocaleString()}</td>
+                    <td>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${e.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+                        {e.payment_status}
+                      </span>
+                    </td>
+                    <td className="text-xs text-brand-muted">{new Date(e.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+                {cohortEnrollments.length === 0 && (
+                  <tr><td colSpan={6} className="py-6 text-center text-brand-muted">No enrollments yet.</td></tr>
                 )}
               </tbody>
             </table>

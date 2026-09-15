@@ -85,4 +85,31 @@ export const api = {
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   postForm: <T>(path: string, formData: FormData) =>
     request<T>(path, { method: "POST", body: formData }),
+  /**
+   * Downloads a file from an authenticated endpoint. A plain <a href> link
+   * can't send the Authorization header, so this fetches the file as a
+   * blob (with the header attached, same as every other request) and
+   * triggers the save via a temporary object URL instead.
+   */
+  download: async (path: string, filename: string): Promise<void> => {
+    const token = getToken();
+    const res = await fetch(`${API_URL}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new ApiError(data.message ?? "Could not download file", res.status);
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
 };

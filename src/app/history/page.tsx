@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { SiteHeader } from "@/components/SiteHeader";
+import { DashboardShell } from "@/components/DashboardShell";
 import type { Booking, WalletTransaction } from "@/types";
 
 interface Paginated<T> {
@@ -54,8 +55,7 @@ export default function HistoryPage() {
   const current = tab === "bookings" ? bookings : fundings;
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col">
-      <SiteHeader />
+    <DashboardShell>
       <div className="max-w-3xl mx-auto w-full p-6">
         <h1 className="text-2xl font-bold text-brand-dark mb-1">History</h1>
         <p className="text-brand-muted mb-6">Every booking and wallet transaction on your account.</p>
@@ -134,6 +134,6 @@ export default function HistoryPage() {
           )}
         </div>
       </div>
-    </main>
+    </DashboardShell>
   );
 }
