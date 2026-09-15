@@ -560,9 +560,9 @@ export default function AdminDashboardPage() {
               <tbody>
                 {bookings.map((b) => (
                   <tr key={b.id} className="border-b last:border-0">
-                    <td className="py-2">{b.customer.firstname} {b.customer.lastname}<br /><span className="text-xs text-brand-muted">{b.customer.email}</span></td>
-                    <td>{b.plan.name}</td>
-                    <td>{b.room.name}</td>
+                    <td className="py-2">{b.customer?.firstname} {b.customer?.lastname}<br /><span className="text-xs text-brand-muted">{b.customer?.email ?? "—"}</span></td>
+                    <td>{b.plan?.name ?? "—"}</td>
+                    <td>{b.room?.name ?? "—"}</td>
                     <td>{b.seat_number}</td>
                     <td>{b.start_date}</td>
                     <td>₦{Number(b.price).toLocaleString()}</td>
@@ -832,8 +832,8 @@ export default function AdminDashboardPage() {
                   </div>
                 )}
                 <div className="flex-1 text-sm">
-                  <p className="font-semibold text-brand-dark">{f.customer.firstname} {f.customer.lastname}</p>
-                  <p className="text-xs text-brand-muted mb-2">{f.customer.email}</p>
+                  <p className="font-semibold text-brand-dark">{f.customer?.firstname} {f.customer?.lastname}</p>
+                  <p className="text-xs text-brand-muted mb-2">{f.customer?.email ?? "—"}</p>
                   <p><span className="text-brand-muted">Amount:</span> ₦{Number(f.amount).toLocaleString()}</p>
                   <p><span className="text-brand-muted">Reference:</span> <span className="text-xs">{f.reference}</span></p>
                   <p><span className="text-brand-muted">Requested:</span> {new Date(f.created_at).toLocaleString()}</p>
@@ -865,7 +865,7 @@ export default function AdminDashboardPage() {
                 {teenRegistrations.map((r) => (
                   <tr key={r.id} className="border-b last:border-0">
                     <td className="py-2">{r.child_firstname} {r.child_lastname}<br /><span className="text-xs text-brand-muted">Age {r.child_age} • {r.school || "—"}</span></td>
-                    <td>{r.customer.firstname} {r.customer.lastname}<br /><span className="text-xs text-brand-muted">{r.customer.email}</span></td>
+                    <td>{r.customer?.firstname} {r.customer?.lastname}<br /><span className="text-xs text-brand-muted">{r.customer?.email ?? "—"}</span></td>
                     <td>
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${r.registration_payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
                         {r.registration_payment_status}
@@ -898,8 +898,8 @@ export default function AdminDashboardPage() {
               <tbody>
                 {cohortEnrollments.map((e) => (
                   <tr key={e.id} className="border-b last:border-0">
-                    <td className="py-2">{e.customer.firstname} {e.customer.lastname}<br /><span className="text-xs text-brand-muted">{e.customer.email}</span></td>
-                    <td>{e.intake.name}<br /><span className="text-xs text-brand-muted">{e.track_selected}</span></td>
+                    <td className="py-2">{e.customer?.firstname} {e.customer?.lastname}<br /><span className="text-xs text-brand-muted">{e.customer?.email ?? "—"}</span></td>
+                    <td>{e.intake?.name ?? "—"}<br /><span className="text-xs text-brand-muted">{e.track_selected}</span></td>
                     <td className="text-xs">{e.bootcamp_option === "bootcamp" ? "Bootcamp" : "Non-Bootcamp"}<br /><span className="text-brand-muted">{e.status_type}</span></td>
                     <td>₦{Number(e.amount_due).toLocaleString()}</td>
                     <td>
