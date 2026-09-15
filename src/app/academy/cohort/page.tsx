@@ -140,7 +140,7 @@ export default function CohortPage() {
           </div>
         ) : enrollment ? (
           <div className="bg-white rounded-xl border shadow-sm p-5">
-            <p className="font-semibold text-brand-dark mb-1">{enrollment.intake.name} — {enrollment.track_selected}</p>
+            <p className="font-semibold text-brand-dark mb-1">{enrollment.intake?.name ?? "—"} — {enrollment.track_selected}</p>
             <p className="text-sm text-brand-muted mb-4">{enrollment.programme_selected} • {enrollment.status_type}</p>
             <dl className="text-sm space-y-1 mb-4">
               <div className="flex justify-between"><dt className="text-brand-muted">{enrollment.bootcamp_option === "bootcamp" ? "Bootcamp" : "Non-Bootcamp"} fee</dt><dd>{formatNaira(enrollment.bootcamp_fee)}</dd></div>

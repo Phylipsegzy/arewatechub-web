@@ -52,8 +52,8 @@ export default function CohortReceiptPage() {
         <p className="text-sm text-brand-muted mb-6">{receipt.reference}</p>
 
         <dl className="text-sm space-y-2 mb-6">
-          <div className="flex justify-between"><dt className="text-brand-muted">Student</dt><dd>{receipt.customer.firstname} {receipt.customer.lastname}</dd></div>
-          <div className="flex justify-between"><dt className="text-brand-muted">Batch</dt><dd>{receipt.intake.name}</dd></div>
+          <div className="flex justify-between"><dt className="text-brand-muted">Student</dt><dd>{receipt.customer?.firstname} {receipt.customer?.lastname}</dd></div>
+          <div className="flex justify-between"><dt className="text-brand-muted">Batch</dt><dd>{receipt.intake?.name ?? "—"}</dd></div>
           <div className="flex justify-between"><dt className="text-brand-muted">Track</dt><dd>{receipt.track_selected}</dd></div>
           <div className="flex justify-between"><dt className="text-brand-muted">{receipt.bootcamp_option === "bootcamp" ? "Bootcamp" : "Non-Bootcamp"} Fee</dt><dd>₦{Number(receipt.bootcamp_fee).toLocaleString()}</dd></div>
           <div className="flex justify-between"><dt className="text-brand-muted">Tuition Fee</dt><dd>₦{Number(receipt.tuition_fee).toLocaleString()}</dd></div>
