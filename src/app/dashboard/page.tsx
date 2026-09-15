@@ -125,7 +125,7 @@ export default function DashboardPage() {
         reference: string; amount: number; email: string; public_key: string;
       }>("/wallet/fund/initialize", { amount: Number(fundAmount) });
 
-      openPaystackPopup({
+      await openPaystackPopup({
         publicKey: data.public_key,
         email: data.email,
         amountNaira: data.amount,

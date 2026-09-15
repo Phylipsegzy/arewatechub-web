@@ -21,12 +21,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           focus-visible polyfill's js-focus-visible class, etc.) inject
           attributes before React hydrates — harmless, but noisy without this. */}
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        {/* afterInteractive (not beforeInteractive) — the popup is only ever
-            triggered by a user click well after the page is interactive, so
-            there's no need to block rendering on this loading, and it avoids
-            a next/script + App Router quirk that was throwing a spurious
-            "script tag" warning in dev. */}
-        <Script src="https://js.paystack.co/v1/inline.js" strategy="afterInteractive" />
+        {/* Paystack's inline.js is intentionally NOT loaded here globally —
+            it throws a fatal, uncaught error on any page without a payment
+            form (crashed the admin panel, which has none). It's loaded
+            on-demand instead, only by pages that actually open the popup —
+            see src/lib/paystack.ts. */}
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
