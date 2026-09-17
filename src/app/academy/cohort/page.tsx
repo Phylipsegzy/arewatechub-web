@@ -51,7 +51,7 @@ export default function CohortPage() {
 
   useEffect(() => {
     if (!customer) return;
-    api.get<CohortEnrollment | null>("/cohort/my-enrollment").then(setEnrollment).catch(() => {});
+    api.get<CohortEnrollment | null>("/cohort/enrollment-status").then(setEnrollment).catch(() => {});
   }, [customer]);
 
   function update(field: keyof typeof form) {
