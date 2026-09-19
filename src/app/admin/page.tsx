@@ -56,7 +56,7 @@ interface TeenRegistration {
   customer: { firstname: string; lastname: string; email: string; phone: string | null };
 }
 
-interface CohortAdminRow {
+interface AcademyAdminRow {
   id: number;
   track_selected: string;
   programme_selected: string;
@@ -67,10 +67,9 @@ interface CohortAdminRow {
   payment_status: string;
   application_status: string;
   created_at: string;
-  intake: { name: string };
+  batch: { name: string };
   customer: { firstname: string; lastname: string; email: string; phone: string | null };
 }
-
 interface Overview {
   total_customers: number;
   total_bookings: number;
@@ -97,7 +96,7 @@ interface WorkspaceDuration {
   price: string;
 }
 
-type Tab = "overview" | "bookings" | "book" | "customers" | "fundings" | "teenprogram" | "cohort";
+type Tab = "overview" | "bookings" | "book" | "customers" | "fundings" | "teenprogram" | "academy";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -157,7 +156,7 @@ const navItems: { tab: Tab; label: string; icon: React.ReactNode }[] = [
   { tab: "customers", label: "Customers", icon: <Users size={18} /> },
   { tab: "fundings", label: "Wallet Fundings", icon: <Wallet size={18} /> },
   { tab: "teenprogram", label: "Future Builders Camp", icon: <GraduationCap size={18} /> },
-  { tab: "cohort", label: "Cohort Programme", icon: <BookOpen size={18} /> },
+  { tab: "academy", label: "Digital Academy", icon: <BookOpen size={18} /> },
 ];
 
 export default function AdminDashboardPage() {
@@ -204,7 +203,8 @@ export default function AdminDashboardPage() {
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [fundings, setFundings] = useState<PendingFunding[]>([]);
   const [teenRegistrations, setTeenRegistrations] = useState<TeenRegistration[]>([]);
-  const [cohortEnrollments, setCohortEnrollments] = useState<CohortAdminRow[]>([]);
+  const [academyEnrollments, setAcademyEnrollments] = useState<AcademyAdminRow[]>([]);
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [rescheduleId, setRescheduleId] = useState<number | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
@@ -257,8 +257,8 @@ export default function AdminDashboardPage() {
         adminApi.get<PendingFunding[]>("/admin/wallet-fundings/pending").then(setFundings).catch((e) => setTabError(e.message ?? "Could not load wallet fundings"));
       } else if (tab === "teenprogram") {
         adminApi.get<{ data: TeenRegistration[] }>("/admin/teen-program").then((r) => setTeenRegistrations(r.data)).catch((e) => setTabError(e.message ?? "Could not load registrations"));
-      } else if (tab === "cohort") {
-        adminApi.get<{ data: CohortAdminRow[] }>("/admin/cohort").then((r) => setCohortEnrollments(r.data)).catch((e) => setTabError(e.message ?? "Could not load enrollments"));
+      } else if (tab === "academy") {
+        adminApi.get<{ data: AcademyAdminRow[] }>("/admin/academy").then((r) => setAcademyEnrollments(r.data)).catch((e) => setTabError(e.message ?? "Could not load enrollments"));
       } else if (tab === "book") {
         adminApi.get<WorkspacePlan[]>("/admin/workspace/plans").then(setPlans).catch((e) => setTabError(e.message ?? "Could not load plans"));
       }
@@ -305,6 +305,17 @@ export default function AdminDashboardPage() {
       setTabError(err instanceof Error ? err.message : "Could not process that funding request");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function handleAdminReceiptDownload(enrollmentId: number, studentName: string) {
+    setDownloadingReceiptId(enrollmentId);
+    try {
+      await adminApi.download(`/admin/academy/${enrollmentId}/receipt/pdf`, `ArewaTecHub_Academy_Receipt_${studentName}.pdf`);
+    } catch (e) {
+      setTabError(e instanceof Error ? e.message : "Could not download receipt");
+    } finally {
+      setDownloadingReceiptId(null);
     }
   }
 
@@ -887,19 +898,19 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {tab === "cohort" && (
+        {tab === "academy" && (
           <div className="bg-white rounded-xl border p-5 overflow-x-auto">
             <table className="w-full text-sm min-w-[800px]">
               <thead>
                 <tr className="text-left text-brand-muted border-b">
-                  <th className="py-2">Student</th><th>Batch / Track</th><th>Package</th><th>Amount Due</th><th>Status</th><th>Enrolled</th>
+                  <th className="py-2">Student</th><th>Batch / Track</th><th>Package</th><th>Amount Due</th><th>Status</th><th>Enrolled</th><th>Receipt</th>
                 </tr>
               </thead>
               <tbody>
-                {cohortEnrollments.map((e) => (
+                {academyEnrollments.map((e) => (
                   <tr key={e.id} className="border-b last:border-0">
                     <td className="py-2">{e.customer?.firstname} {e.customer?.lastname}<br /><span className="text-xs text-brand-muted">{e.customer?.email ?? "—"}</span></td>
-                    <td>{e.intake?.name ?? "—"}<br /><span className="text-xs text-brand-muted">{e.track_selected}</span></td>
+                    <td>{e.batch?.name ?? "—"}<br /><span className="text-xs text-brand-muted">{e.track_selected}</span></td>
                     <td className="text-xs">{e.bootcamp_option === "bootcamp" ? "Bootcamp" : "Non-Bootcamp"}<br /><span className="text-brand-muted">{e.status_type}</span></td>
                     <td>₦{Number(e.amount_due).toLocaleString()}</td>
                     <td>
@@ -908,10 +919,23 @@ export default function AdminDashboardPage() {
                       </span>
                     </td>
                     <td className="text-xs text-brand-muted">{new Date(e.created_at).toLocaleDateString()}</td>
+                    <td>
+                      {e.payment_status === "paid" ? (
+                        <button
+                          onClick={() => handleAdminReceiptDownload(e.id, `${e.customer?.firstname}_${e.customer?.lastname}`)}
+                          disabled={downloadingReceiptId === e.id}
+                          className="text-brand-primary text-xs font-medium hover:underline disabled:opacity-60"
+                        >
+                          {downloadingReceiptId === e.id ? "Preparing…" : "Download"}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-brand-muted">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
-                {cohortEnrollments.length === 0 && (
-                  <tr><td colSpan={6} className="py-6 text-center text-brand-muted">No enrollments yet.</td></tr>
+                {academyEnrollments.length === 0 && (
+                  <tr><td colSpan={7} className="py-6 text-center text-brand-muted">No enrollments yet.</td></tr>
                 )}
               </tbody>
             </table>

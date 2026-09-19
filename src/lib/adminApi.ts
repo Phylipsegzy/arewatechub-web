@@ -56,4 +56,31 @@ export const adminApi = {
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
+  /**
+   * Downloads a file from an authenticated admin endpoint — same reasoning
+   * as the customer-side api.ts: a plain link click can't send the
+   * Authorization header, so this fetches as a blob and triggers the save
+   * via a temporary object URL instead.
+   */
+  download: async (path: string, filename: string): Promise<void> => {
+    const token = getToken();
+    const res = await fetch(`${API_URL}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new ApiError(data.message ?? "Could not download file", res.status);
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
 };

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { SiteHeader } from "@/components/SiteHeader";
-import type { CohortBatch, CohortPricing, CohortEnrollment } from "@/types";
+import type { AcademyBatch, AcademyPricing, AcademyEnrollment } from "@/types";
 import { GraduationCap, FileText } from "lucide-react";
 
 const COURSES = [
@@ -26,13 +26,13 @@ function formatNaira(n: number | string) {
   return `₦${Number(n).toLocaleString()}`;
 }
 
-export default function CohortPage() {
+export default function AcademyCohortPage() {
   const { customer, loading, refreshCustomer } = useAuth();
-  const [batches, setBatches] = useState<CohortBatch[]>([]);
-  const [pricing, setPricing] = useState<CohortPricing | null>(null);
-  const [enrollment, setEnrollment] = useState<CohortEnrollment | null>(null);
+  const [batches, setBatches] = useState<AcademyBatch[]>([]);
+  const [pricing, setPricing] = useState<AcademyPricing | null>(null);
+  const [enrollment, setEnrollment] = useState<AcademyEnrollment | null>(null);
   const [form, setForm] = useState({
-    cohort_intake_id: "", programme_selected: "", track_selected: "",
+    academy_batch_id: "", programme_selected: "", track_selected: "",
     status_type: "", state_code: "", matric_number: "",
     bootcamp_option: "", education_level: "", has_laptop: "true", motivation: "",
   });
@@ -43,7 +43,7 @@ export default function CohortPage() {
   const [insufficientFunds, setInsufficientFunds] = useState<number | null>(null);
 
   useEffect(() => {
-    api.get<{ courses: string[]; batches: CohortBatch[]; pricing: CohortPricing }>("/cohort").then((r) => {
+    api.get<{ courses: string[]; batches: AcademyBatch[]; pricing: AcademyPricing }>("/academy/options").then((r) => {
       setBatches(r.batches);
       setPricing(r.pricing);
     }).catch(() => {});
@@ -51,7 +51,7 @@ export default function CohortPage() {
 
   useEffect(() => {
     if (!customer) return;
-    api.get<CohortEnrollment | null>("/cohort/enrollment-status").then(setEnrollment).catch(() => {});
+    api.get<AcademyEnrollment | null>("/academy/status").then(setEnrollment).catch(() => {});
   }, [customer]);
 
   function update(field: keyof typeof form) {
@@ -68,9 +68,9 @@ export default function CohortPage() {
     setError(null);
     setMessage(null);
     try {
-      const result = await api.post<{ message: string; enrollment: CohortEnrollment }>("/cohort/enroll", {
+      const result = await api.post<{ message: string; enrollment: AcademyEnrollment }>("/academy/enroll", {
         ...form,
-        cohort_intake_id: Number(form.cohort_intake_id),
+        academy_batch_id: Number(form.academy_batch_id),
         has_laptop: form.has_laptop === "true",
       });
       setEnrollment(result.enrollment);
@@ -89,7 +89,7 @@ export default function CohortPage() {
     setMessage(null);
     setInsufficientFunds(null);
     try {
-      const result = await api.post<{ message: string; enrollment: CohortEnrollment }>(`/cohort/${enrollment.id}/pay`);
+      const result = await api.post<{ message: string; enrollment: AcademyEnrollment }>(`/academy/${enrollment.id}/pay`);
       setEnrollment(result.enrollment);
       setMessage(result.message);
       await refreshCustomer();
@@ -140,7 +140,7 @@ export default function CohortPage() {
           </div>
         ) : enrollment ? (
           <div className="bg-white rounded-xl border shadow-sm p-5">
-            <p className="font-semibold text-brand-dark mb-1">{enrollment.intake?.name ?? "—"} — {enrollment.track_selected}</p>
+            <p className="font-semibold text-brand-dark mb-1">{enrollment.batch?.name ?? "—"} — {enrollment.track_selected}</p>
             <p className="text-sm text-brand-muted mb-4">{enrollment.programme_selected} • {enrollment.status_type}</p>
             <dl className="text-sm space-y-1 mb-4">
               <div className="flex justify-between"><dt className="text-brand-muted">{enrollment.bootcamp_option === "bootcamp" ? "Bootcamp" : "Non-Bootcamp"} fee</dt><dd>{formatNaira(enrollment.bootcamp_fee)}</dd></div>
@@ -150,7 +150,7 @@ export default function CohortPage() {
             {enrollment.payment_status === "paid" ? (
               <>
                 <p className="text-green-600 font-semibold text-sm mb-3">Paid ✓ — slot confirmed</p>
-                <a href={`/dashboard/cohort/receipt/${enrollment.id}`} className="flex items-center gap-1 text-brand-primary text-sm hover:underline">
+                <a href={`/dashboard/academy/receipt/${enrollment.id}`} className="flex items-center gap-1 text-brand-primary text-sm hover:underline">
                   <FileText size={14} /> View Receipt
                 </a>
               </>
@@ -174,7 +174,7 @@ export default function CohortPage() {
               {COURSES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
 
-            <select required value={form.cohort_intake_id} onChange={update("cohort_intake_id")} className="w-full border rounded-md px-3 py-2 text-sm">
+            <select required value={form.academy_batch_id} onChange={update("academy_batch_id")} className="w-full border rounded-md px-3 py-2 text-sm">
               <option value="" disabled>Choose a batch</option>
               {batches.map((b) => (
                 <option key={b.id} value={b.id} disabled={b.full}>

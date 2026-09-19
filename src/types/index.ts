@@ -74,7 +74,7 @@ export interface Booking {
   internet_access?: InternetAccess | null;
 }
 
-export interface CohortBatch {
+export interface AcademyBatch {
   id: number;
   name: string;
   start_date: string;
@@ -83,7 +83,7 @@ export interface CohortBatch {
   full: boolean;
 }
 
-export interface CohortPricing {
+export interface AcademyPricing {
   bootcamp_fee: number;
   non_bootcamp_fee: number;
   tuition_full: number;
@@ -92,7 +92,7 @@ export interface CohortPricing {
   discount_ends_at: string;
 }
 
-export interface CohortEnrollment {
+export interface AcademyEnrollment {
   id: number;
   track_selected: string;
   programme_selected: string;
@@ -103,9 +103,10 @@ export interface CohortEnrollment {
   tuition_fee: string;
   amount_due: string;
   amount_paid: string;
+  reference: string | null;
   payment_status: "unpaid" | "partial" | "paid";
   application_status: "pending" | "accepted" | "rejected";
-  intake: { id: number; name: string; start_date?: string; end_date?: string };
+  batch: { id: number; name: string; start_date?: string; end_date?: string };
 }
 
 export interface TeenProgramPayment {
