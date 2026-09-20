@@ -308,10 +308,15 @@ export default function AdminDashboardPage() {
     }
   }
 
-  async function handleAdminReceiptDownload(enrollmentId: number, studentName: string) {
-    setDownloadingReceiptId(enrollmentId);
+  async function handleAdminReceiptDownload(
+    kind: "academy" | "bookings" | "wallet-fundings",
+    id: number,
+    label: string
+  ) {
+    setDownloadingReceiptId(id);
+    const filenamePrefix = kind === "academy" ? "Academy" : kind === "bookings" ? "Booking" : "Wallet";
     try {
-      await adminApi.download(`/admin/academy/${enrollmentId}/receipt/pdf`, `ArewaTecHub_Academy_Receipt_${studentName}.pdf`);
+      await adminApi.download(`/admin/${kind}/${id}/receipt/pdf`, `ArewaTecHub_${filenamePrefix}_Receipt_${label}.pdf`);
     } catch (e) {
       setTabError(e instanceof Error ? e.message : "Could not download receipt");
     } finally {
@@ -565,7 +570,7 @@ export default function AdminDashboardPage() {
             <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr className="text-left text-brand-muted border-b">
-                  <th className="py-2">Customer</th><th>Plan</th><th>Room</th><th>Seat</th><th>Date</th><th>Price</th><th>Status</th><th></th>
+                  <th className="py-2">Customer</th><th>Plan</th><th>Room</th><th>Seat</th><th>Date</th><th>Price</th><th>Status</th><th>Receipt</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -578,6 +583,19 @@ export default function AdminDashboardPage() {
                     <td>{b.start_date}</td>
                     <td>₦{Number(b.price).toLocaleString()}</td>
                     <td><StatusBadge status={b.status} /></td>
+                    <td>
+                      {b.status === "confirmed" ? (
+                        <button
+                          onClick={() => handleAdminReceiptDownload("bookings", b.id, `${b.customer?.firstname}_${b.customer?.lastname}`)}
+                          disabled={downloadingReceiptId === b.id}
+                          className="text-brand-primary text-xs font-medium hover:underline disabled:opacity-60"
+                        >
+                          {downloadingReceiptId === b.id ? "Preparing…" : "Download"}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-brand-muted">—</span>
+                      )}
+                    </td>
                     <td className="space-y-1">
                       <select
                         disabled={busyId === b.id}
@@ -922,7 +940,7 @@ export default function AdminDashboardPage() {
                     <td>
                       {e.payment_status === "paid" ? (
                         <button
-                          onClick={() => handleAdminReceiptDownload(e.id, `${e.customer?.firstname}_${e.customer?.lastname}`)}
+                          onClick={() => handleAdminReceiptDownload("academy", e.id, `${e.customer?.firstname}_${e.customer?.lastname}`)}
                           disabled={downloadingReceiptId === e.id}
                           className="text-brand-primary text-xs font-medium hover:underline disabled:opacity-60"
                         >
