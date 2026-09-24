@@ -6,7 +6,7 @@ import { useAdminAuth } from "@/context/AdminAuthContext";
 import { adminApi } from "@/lib/adminApi";
 import {
   LayoutDashboard, CalendarDays, Users, Wallet, PlusCircle, LogOut, Search,
-  Sparkles, Clock, Armchair, Check, Bell, BellOff, GraduationCap, BookOpen,
+  Sparkles, Clock, Armchair, Check, Bell, BellOff, GraduationCap, BookOpen, UserCog, KeyRound,
 } from "lucide-react";
 import { subscribeToPush, unsubscribeFromPush, getExistingPushSubscription } from "@/lib/push";
 
@@ -32,6 +32,16 @@ interface AdminCustomer {
   created_at: string;
 }
 
+interface FundingHistoryRow {
+  id: number;
+  amount: string;
+  reference: string;
+  status: string;
+  source: string;
+  created_at: string;
+  customer: { firstname: string; lastname: string; email: string } | null;
+}
+
 interface PendingFunding {
   id: number;
   amount: string;
@@ -54,6 +64,14 @@ interface TeenRegistration {
   vip_payment_status: string;
   created_at: string;
   customer: { firstname: string; lastname: string; email: string; phone: string | null };
+}
+
+interface CashierRow {
+  id: number;
+  name: string | null;
+  email: string;
+  created_at: string;
+  creator?: { name: string | null; email: string } | null;
 }
 
 interface AcademyAdminRow {
@@ -96,7 +114,7 @@ interface WorkspaceDuration {
   price: string;
 }
 
-type Tab = "overview" | "bookings" | "book" | "customers" | "fundings" | "teenprogram" | "academy";
+type Tab = "overview" | "bookings" | "book" | "customers" | "fundings" | "teenprogram" | "academy" | "cashiers";
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -149,19 +167,30 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-const navItems: { tab: Tab; label: string; icon: React.ReactNode }[] = [
-  { tab: "overview", label: "Overview", icon: <LayoutDashboard size={18} /> },
-  { tab: "bookings", label: "Bookings", icon: <CalendarDays size={18} /> },
-  { tab: "book", label: "Book for Customer", icon: <PlusCircle size={18} /> },
-  { tab: "customers", label: "Customers", icon: <Users size={18} /> },
-  { tab: "fundings", label: "Wallet Fundings", icon: <Wallet size={18} /> },
-  { tab: "teenprogram", label: "Future Builders Camp", icon: <GraduationCap size={18} /> },
-  { tab: "academy", label: "Digital Academy", icon: <BookOpen size={18} /> },
+const navItems: { tab: Tab; label: string; icon: React.ReactNode; roles: ("admin" | "cashier")[] }[] = [
+  { tab: "overview", label: "Overview", icon: <LayoutDashboard size={18} />, roles: ["admin"] },
+  { tab: "bookings", label: "Bookings", icon: <CalendarDays size={18} />, roles: ["admin", "cashier"] },
+  { tab: "book", label: "Book for Customer", icon: <PlusCircle size={18} />, roles: ["admin", "cashier"] },
+  { tab: "customers", label: "Customers", icon: <Users size={18} />, roles: ["admin"] },
+  { tab: "fundings", label: "Wallet Fundings", icon: <Wallet size={18} />, roles: ["admin", "cashier"] },
+  { tab: "teenprogram", label: "Future Builders Camp", icon: <GraduationCap size={18} />, roles: ["admin"] },
+  { tab: "academy", label: "Digital Academy", icon: <BookOpen size={18} />, roles: ["admin"] },
+  { tab: "cashiers", label: "Manage Cashiers", icon: <UserCog size={18} />, roles: ["admin"] },
 ];
 
 export default function AdminDashboardPage() {
   const { admin, loading, sessionError, logout, retry } = useAdminAuth();
+  const visibleNavItems = navItems.filter((item) => !admin || item.roles.includes(admin.role));
   const [tab, setTab] = useState<Tab>("overview");
+
+  // Redirect off a tab the current role can't see — matters right after
+  // login, since "overview" (the default) is admin-only.
+  useEffect(() => {
+    if (admin && !visibleNavItems.some((item) => item.tab === tab)) {
+      setTab(visibleNavItems[0]?.tab ?? "bookings");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [admin]);
 
   const [overview, setOverview] = useState<Overview | null>(null);
   const [tabError, setTabError] = useState<string | null>(null);
@@ -202,8 +231,21 @@ export default function AdminDashboardPage() {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [fundings, setFundings] = useState<PendingFunding[]>([]);
+  const [fundingView, setFundingView] = useState<"pending" | "history">("pending");
+  const [fundingHistory, setFundingHistory] = useState<FundingHistoryRow[]>([]);
   const [teenRegistrations, setTeenRegistrations] = useState<TeenRegistration[]>([]);
   const [academyEnrollments, setAcademyEnrollments] = useState<AcademyAdminRow[]>([]);
+  const [cashiers, setCashiers] = useState<CashierRow[]>([]);
+  const [cashierForm, setCashierForm] = useState({ name: "", email: "", password: "" });
+  const [cashierSubmitting, setCashierSubmitting] = useState(false);
+  const [cashierError, setCashierError] = useState<string | null>(null);
+  const [cashierMessage, setCashierMessage] = useState<string | null>(null);
+  const [removingCashierId, setRemovingCashierId] = useState<number | null>(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ current_password: "", new_password: "", new_password_confirmation: "" });
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [downloadingReceiptId, setDownloadingReceiptId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [rescheduleId, setRescheduleId] = useState<number | null>(null);
@@ -259,12 +301,22 @@ export default function AdminDashboardPage() {
         adminApi.get<{ data: TeenRegistration[] }>("/admin/teen-program").then((r) => setTeenRegistrations(r.data)).catch((e) => setTabError(e.message ?? "Could not load registrations"));
       } else if (tab === "academy") {
         adminApi.get<{ data: AcademyAdminRow[] }>("/admin/academy").then((r) => setAcademyEnrollments(r.data)).catch((e) => setTabError(e.message ?? "Could not load enrollments"));
+      } else if (tab === "cashiers") {
+        adminApi.get<CashierRow[]>("/admin/cashiers").then(setCashiers).catch((e) => setTabError(e.message ?? "Could not load cashiers"));
       } else if (tab === "book") {
         adminApi.get<WorkspacePlan[]>("/admin/workspace/plans").then(setPlans).catch((e) => setTabError(e.message ?? "Could not load plans"));
       }
     }, 300); // debounce — matters most for the customers search-as-you-type
     return () => clearTimeout(timeout);
   }, [tab, admin, search]);
+
+  useEffect(() => {
+    if (!admin || tab !== "fundings" || fundingView !== "history") return;
+    adminApi
+      .get<{ data: FundingHistoryRow[] }>("/admin/wallet-fundings/history")
+      .then((r) => setFundingHistory(r.data))
+      .catch((e) => setTabError(e.message ?? "Could not load funding history"));
+  }, [admin, tab, fundingView]);
 
   async function changeStatus(booking: AdminBooking, status: string) {
     setBusyId(booking.id);
@@ -305,6 +357,52 @@ export default function AdminDashboardPage() {
       setTabError(err instanceof Error ? err.message : "Could not process that funding request");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function handleCreateCashier(e: React.FormEvent) {
+    e.preventDefault();
+    setCashierSubmitting(true);
+    setCashierError(null);
+    setCashierMessage(null);
+    try {
+      const result = await adminApi.post<{ message: string; cashier: CashierRow }>("/admin/cashiers", cashierForm);
+      setCashiers((prev) => [result.cashier, ...prev]);
+      setCashierMessage(result.message);
+      setCashierForm({ name: "", email: "", password: "" });
+    } catch (err) {
+      setCashierError(err instanceof Error ? err.message : "Could not create cashier account");
+    } finally {
+      setCashierSubmitting(false);
+    }
+  }
+
+  async function handleRemoveCashier(cashierId: number) {
+    setRemovingCashierId(cashierId);
+    setCashierError(null);
+    try {
+      await adminApi.delete(`/admin/cashiers/${cashierId}`);
+      setCashiers((prev) => prev.filter((c) => c.id !== cashierId));
+    } catch (err) {
+      setCashierError(err instanceof Error ? err.message : "Could not remove cashier account");
+    } finally {
+      setRemovingCashierId(null);
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordSubmitting(true);
+    setPasswordError(null);
+    setPasswordMessage(null);
+    try {
+      const result = await adminApi.post<{ message: string }>("/admin/password/update", passwordForm);
+      setPasswordMessage(result.message);
+      setPasswordForm({ current_password: "", new_password: "", new_password_confirmation: "" });
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Could not update password");
+    } finally {
+      setPasswordSubmitting(false);
     }
   }
 
@@ -480,7 +578,7 @@ export default function AdminDashboardPage() {
           <span className="font-bold">ArewaTecHub</span>
         </div>
         <nav className="flex-1 px-2 space-y-1">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <button
               key={item.tab}
               onClick={() => setTab(item.tab)}
@@ -503,6 +601,12 @@ export default function AdminDashboardPage() {
             {pushBusy ? "Updating…" : pushEnabled ? "Notifications on" : "Enable notifications"}
           </button>
           {pushError && <p className="px-5 pb-2 text-xs text-red-300">{pushError}</p>}
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="w-full flex items-center gap-3 px-5 py-3 text-sm text-white/70 hover:text-white"
+          >
+            <KeyRound size={16} /> Change password
+          </button>
           <button onClick={logout} className="w-full flex items-center gap-3 px-5 py-4 text-sm text-white/60 hover:text-white border-t border-white/10">
             <LogOut size={16} /> Log out
           </button>
@@ -511,7 +615,7 @@ export default function AdminDashboardPage() {
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-dark text-white flex justify-around py-2 z-20">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <button
             key={item.tab}
             onClick={() => setTab(item.tab)}
@@ -525,7 +629,7 @@ export default function AdminDashboardPage() {
       {/* Main content */}
       <main className="flex-1 p-4 sm:p-8 pb-20 md:pb-8 overflow-x-auto">
         <h1 className="text-xl font-bold text-brand-dark mb-6 capitalize">
-          {navItems.find((n) => n.tab === tab)?.label}
+          {visibleNavItems.find((n) => n.tab === tab)?.label}
         </h1>
 
         {tabError && (
@@ -838,6 +942,64 @@ export default function AdminDashboardPage() {
 
         {tab === "fundings" && (
           <div className="space-y-4">
+            <div className="flex gap-2 mb-2">
+              <button
+                onClick={() => setFundingView("pending")}
+                className={`text-sm font-semibold px-4 py-1.5 rounded-full ${fundingView === "pending" ? "bg-brand-primary text-white" : "bg-white border text-brand-muted"}`}
+              >
+                Pending
+              </button>
+              <button
+                onClick={() => setFundingView("history")}
+                className={`text-sm font-semibold px-4 py-1.5 rounded-full ${fundingView === "history" ? "bg-brand-primary text-white" : "bg-white border text-brand-muted"}`}
+              >
+                History
+              </button>
+            </div>
+
+            {fundingView === "history" ? (
+              <div className="bg-white rounded-xl border p-5 overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
+                  <thead>
+                    <tr className="text-left text-brand-muted border-b">
+                      <th className="py-2">Customer</th><th>Amount</th><th>Source</th><th>Status</th><th>Date</th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fundingHistory.map((f) => (
+                      <tr key={f.id} className="border-b last:border-0">
+                        <td className="py-2">{f.customer?.firstname} {f.customer?.lastname}<br /><span className="text-xs text-brand-muted">{f.customer?.email ?? "—"}</span></td>
+                        <td>₦{Number(f.amount).toLocaleString()}</td>
+                        <td className="text-xs">{f.source.replace(/_/g, " ")}</td>
+                        <td>
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${f.status === "successful" ? "bg-green-100 text-green-800" : f.status === "pending" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}>
+                            {f.status}
+                          </span>
+                        </td>
+                        <td className="text-xs text-brand-muted">{new Date(f.created_at).toLocaleString()}</td>
+                        <td>
+                          {f.status === "successful" ? (
+                            <button
+                              onClick={() => handleAdminReceiptDownload("wallet-fundings", f.id, `${f.customer?.firstname}_${f.customer?.lastname}`)}
+                              disabled={downloadingReceiptId === f.id}
+                              className="text-brand-primary text-xs font-medium hover:underline disabled:opacity-60"
+                            >
+                              {downloadingReceiptId === f.id ? "Preparing…" : "Download"}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-brand-muted">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {fundingHistory.length === 0 && (
+                      <tr><td colSpan={6} className="py-6 text-center text-brand-muted">No funding history yet.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <>
             {fundings.map((f) => (
               <div key={f.id} className="bg-white rounded-xl border p-5 flex flex-col sm:flex-row gap-4">
                 {f.proof_of_payment_url ? (
@@ -878,6 +1040,8 @@ export default function AdminDashboardPage() {
               <div className="bg-white rounded-xl border p-6 text-center text-brand-muted text-sm">
                 Nothing pending — dedicated account transfers auto-credit via webhook.
               </div>
+            )}
+              </>
             )}
           </div>
         )}
@@ -959,7 +1123,96 @@ export default function AdminDashboardPage() {
             </table>
           </div>
         )}
+
+        {tab === "cashiers" && (
+          <div className="space-y-6">
+            <form onSubmit={handleCreateCashier} className="bg-white rounded-xl border p-5 max-w-md space-y-3">
+              <h2 className="font-semibold text-brand-dark mb-1">Create Cashier Account</h2>
+              {cashierMessage && <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2">{cashierMessage}</p>}
+              {cashierError && <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">{cashierError}</p>}
+              <input required placeholder="Full name" value={cashierForm.name} onChange={(e) => setCashierForm((f) => ({ ...f, name: e.target.value }))} className="w-full border rounded-md px-3 py-2 text-sm" />
+              <input required type="email" placeholder="Email" value={cashierForm.email} onChange={(e) => setCashierForm((f) => ({ ...f, email: e.target.value }))} className="w-full border rounded-md px-3 py-2 text-sm" />
+              <input required type="password" minLength={8} placeholder="Password (min. 8 characters)" value={cashierForm.password} onChange={(e) => setCashierForm((f) => ({ ...f, password: e.target.value }))} className="w-full border rounded-md px-3 py-2 text-sm" />
+              <button disabled={cashierSubmitting} className="bg-brand-primary text-white rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-60">
+                {cashierSubmitting ? "Creating…" : "Create Cashier"}
+              </button>
+              <p className="text-xs text-brand-muted">
+                Cashiers can log in, book for customers, view bookings, and accept manual wallet fundings —
+                nothing else. Only a full admin can create or remove a cashier account.
+              </p>
+            </form>
+
+            <div className="bg-white rounded-xl border p-5 overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
+                <thead>
+                  <tr className="text-left text-brand-muted border-b">
+                    <th className="py-2">Name</th><th>Email</th><th>Created By</th><th>Created</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cashiers.map((c) => (
+                    <tr key={c.id} className="border-b last:border-0">
+                      <td className="py-2">{c.name ?? "—"}</td>
+                      <td>{c.email}</td>
+                      <td className="text-xs text-brand-muted">{c.creator?.name ?? c.creator?.email ?? "—"}</td>
+                      <td className="text-xs text-brand-muted">{new Date(c.created_at).toLocaleDateString()}</td>
+                      <td>
+                        <button
+                          onClick={() => handleRemoveCashier(c.id)}
+                          disabled={removingCashierId === c.id}
+                          className="text-red-600 text-xs font-medium hover:underline disabled:opacity-60"
+                        >
+                          {removingCashierId === c.id ? "Removing…" : "Remove"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {cashiers.length === 0 && (
+                    <tr><td colSpan={5} className="py-6 text-center text-brand-muted">No cashier accounts yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* Change password modal */}
+      {showChangePassword && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-30 p-4">
+          <form onSubmit={handleChangePassword} className="bg-white rounded-xl p-6 w-full max-w-sm">
+            <h3 className="font-bold text-brand-dark mb-4">Change Password</h3>
+            {passwordMessage && <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2 mb-3">{passwordMessage}</p>}
+            {passwordError && <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-3">{passwordError}</p>}
+            <input
+              required type="password" placeholder="Current password"
+              value={passwordForm.current_password}
+              onChange={(e) => setPasswordForm((f) => ({ ...f, current_password: e.target.value }))}
+              className="w-full border rounded-md px-3 py-2 text-sm mb-3"
+            />
+            <input
+              required type="password" minLength={8} placeholder="New password (min. 8 characters)"
+              value={passwordForm.new_password}
+              onChange={(e) => setPasswordForm((f) => ({ ...f, new_password: e.target.value }))}
+              className="w-full border rounded-md px-3 py-2 text-sm mb-3"
+            />
+            <input
+              required type="password" placeholder="Confirm new password"
+              value={passwordForm.new_password_confirmation}
+              onChange={(e) => setPasswordForm((f) => ({ ...f, new_password_confirmation: e.target.value }))}
+              className="w-full border rounded-md px-3 py-2 text-sm mb-4"
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowChangePassword(false)} className="flex-1 border rounded-full py-2 text-sm font-semibold">
+                Close
+              </button>
+              <button disabled={passwordSubmitting} className="flex-1 bg-brand-primary text-white rounded-full py-2 text-sm font-semibold disabled:opacity-60">
+                {passwordSubmitting ? "Saving…" : "Update"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Wallet adjustment modal */}
       {adjustCustomer && (

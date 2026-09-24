@@ -6,7 +6,9 @@ import { adminApi, ApiError, getStoredAdminToken, setAdminToken } from "@/lib/ad
 
 interface Admin {
   id: number;
+  name: string | null;
   email: string;
+  role: "admin" | "cashier";
 }
 
 interface AdminAuthContextValue {
